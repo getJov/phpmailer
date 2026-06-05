@@ -1,5 +1,8 @@
 .env
 
+AGENTS.md
+plans/
+
 PHPMailer-master/
 PHPMailer-master.zip
 PHPMailer-master.zip:Zone.Identifier
