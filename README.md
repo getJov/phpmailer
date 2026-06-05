@@ -1,0 +1,1 @@
+Mailer is a lightweight PHP application for managing recipient emails in MySQL and sending bulk email through PHPMailer SMTP.
