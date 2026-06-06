@@ -2,6 +2,10 @@
 
 This is the `module-version` branch. It is the maintained copy-paste PHP mailer module for adding SMTP email sending to an existing PHP website.
 
+> Recommended branch: `module-version`
+>
+> Use this branch for new integrations and future maintenance. The `main` and `target-send` branches are reference starter versions only.
+
 The module supports:
 
 - Target send to one recipient
@@ -11,6 +15,16 @@ The module supports:
 - Default or per-send sender display name
 
 The root app pages from the starter branches are intentionally not included on this branch.
+
+## Branch Guide
+
+| Branch | Purpose | Maintenance status |
+|--------|---------|--------------------|
+| `module-version` | Reusable copy-paste PHP mailer module with target send, multi-recipient send, and database-backed bulk send | Maintained |
+| `main` | Original bulk-send starter app | Reference starter only |
+| `target-send` | Direct target-send starter app | Reference starter only |
+
+For new projects, use `module-version`. The other branches are useful as starting references, but developers who use them should maintain and extend those branches themselves.
 
 ## Requirements
 
@@ -285,6 +299,12 @@ phpmailer/src/SMTP.php
 ```
 
 OAuth, POP-before-SMTP, language packs, Composer metadata, duplicate source folders, and zip artifacts are intentionally excluded.
+
+## Not Included Yet
+
+This module intentionally does not include attachments, templates, CC, BCC, reply-to handling, queues, retries, or built-in rate limiting.
+
+Developers can add those features in their own systems or contribute them later. For production use, the host system should still handle authentication, authorization, CSRF protection, rate limiting, logging, and queueing when needed.
 
 ## Production Notes
 
