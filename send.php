@@ -1,5 +1,5 @@
 <?php
-include 'connect.php';
+include 'config.php';
 
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\PHPMailer;
@@ -16,17 +16,38 @@ function redirectWithAlert($message)
     echo '</script>';
 }
 
-function requiredEnv($key)
+function parseRecipients($value)
 {
-    return trim(envValue($key, ''));
+    $parts = preg_split('/[\r\n,]+/', $value);
+    $recipients = [];
+
+    foreach ($parts as $part) {
+        $email = trim($part);
+
+        if ($email === '') {
+            continue;
+        }
+
+        $recipients[] = $email;
+    }
+
+    return array_values(array_unique($recipients));
+}
+
+function invalidRecipients($recipients)
+{
+    $invalid = [];
+
+    foreach ($recipients as $recipient) {
+        if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            $invalid[] = $recipient;
+        }
+    }
+
+    return $invalid;
 }
 
 if (isset($_POST['send'])) {
-    if (!$conn) {
-        redirectWithAlert('Unable to send email. Check your database configuration.');
-        exit;
-    }
-
     $smtpHost = requiredEnv('SMTP_HOST');
     $smtpPort = (int) requiredEnv('SMTP_PORT');
     $smtpSecure = requiredEnv('SMTP_SECURE');
@@ -45,23 +66,23 @@ if (isset($_POST['send'])) {
         exit;
     }
 
+    $recipients = parseRecipients($_POST['recipients'] ?? '');
     $subject = trim($_POST['subject'] ?? '');
     $message = trim($_POST['message'] ?? '');
 
-    if ($subject === '' || $message === '') {
-        redirectWithAlert('Subject and message are required.');
+    if (count($recipients) === 0 || $subject === '' || $message === '') {
+        redirectWithAlert('Recipients, subject, and message are required.');
         exit;
     }
 
-    $result = mysqli_query($conn, 'SELECT email FROM emails');
+    $invalid = invalidRecipients($recipients);
 
-    if ($result === false) {
-        redirectWithAlert('Unable to load recipients right now.');
+    if (count($invalid) > 0) {
+        redirectWithAlert('Invalid recipient email: ' . implode(', ', $invalid));
         exit;
     }
 
     $mail = new PHPMailer(true);
-    $recipientCount = 0;
 
     try {
         $mail->isSMTP();
@@ -73,20 +94,8 @@ if (isset($_POST['send'])) {
         $mail->Port = $smtpPort;
         $mail->setFrom($smtpFrom);
 
-        while ($row = mysqli_fetch_assoc($result)) {
-            $email = trim($row['email'] ?? '');
-
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                continue;
-            }
-
-            $mail->addAddress($email);
-            $recipientCount++;
-        }
-
-        if ($recipientCount === 0) {
-            redirectWithAlert('No valid recipients found.');
-            exit;
+        foreach ($recipients as $recipient) {
+            $mail->addAddress($recipient);
         }
 
         $mail->isHTML(true);
