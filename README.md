@@ -77,7 +77,7 @@ your-site/
    SMTP_PORT=465
    SMTP_SECURE=ssl
    SMTP_USERNAME=sender@example.com
-   SMTP_PASSWORD=your-app-password
+   SMTP_PASSWORD=
    SMTP_FROM=sender@example.com
    SMTP_FROM_NAME=Your Website
    ```
@@ -95,7 +95,7 @@ Optional key:
 
 - `SMTP_FROM_NAME`
 
-For Gmail SMTP, use a generated app password. Do not use your normal account password.
+Set `SMTP_PASSWORD` to your SMTP app password in your local `.env`. For Gmail SMTP, use a generated app password. Do not use your normal account password.
 
 ## Load The Module
 
@@ -124,7 +124,7 @@ $config = MailerConfig::fromArray([
     'SMTP_PORT' => '465',
     'SMTP_SECURE' => 'ssl',
     'SMTP_USERNAME' => 'sender@example.com',
-    'SMTP_PASSWORD' => 'your-app-password',
+    'SMTP_PASSWORD' => '',
     'SMTP_FROM' => 'sender@example.com',
     'SMTP_FROM_NAME' => 'Your Website',
 ]);
