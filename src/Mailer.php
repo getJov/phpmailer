@@ -99,7 +99,11 @@ class Mailer
         string $message,
         array $options = []
     ): array {
-        $result = @$conn->query($query);
+        try {
+            $result = $conn->query($query);
+        } catch (Throwable $exception) {
+            return $this->result(false, 0, 0, ['Unable to load recipients from database.']);
+        }
 
         if (!$result instanceof mysqli_result) {
             return $this->result(false, 0, 0, ['Unable to load recipients from database.']);
