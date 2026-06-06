@@ -48,6 +48,22 @@ function invalidRecipients($recipients)
 }
 
 if (isset($_POST['send'])) {
+    $recipients = parseRecipients($_POST['recipients'] ?? '');
+    $subject = trim($_POST['subject'] ?? '');
+    $message = trim($_POST['message'] ?? '');
+
+    if (count($recipients) === 0 || $subject === '' || $message === '') {
+        redirectWithAlert('Recipients, subject, and message are required.');
+        exit;
+    }
+
+    $invalid = invalidRecipients($recipients);
+
+    if (count($invalid) > 0) {
+        redirectWithAlert('Invalid recipient email: ' . implode(', ', $invalid));
+        exit;
+    }
+
     $smtpHost = requiredEnv('SMTP_HOST');
     $smtpPort = (int) requiredEnv('SMTP_PORT');
     $smtpSecure = requiredEnv('SMTP_SECURE');
@@ -63,22 +79,6 @@ if (isset($_POST['send'])) {
         !filter_var($smtpFrom, FILTER_VALIDATE_EMAIL)
     ) {
         redirectWithAlert('Unable to send email. Complete your SMTP configuration first.');
-        exit;
-    }
-
-    $recipients = parseRecipients($_POST['recipients'] ?? '');
-    $subject = trim($_POST['subject'] ?? '');
-    $message = trim($_POST['message'] ?? '');
-
-    if (count($recipients) === 0 || $subject === '' || $message === '') {
-        redirectWithAlert('Recipients, subject, and message are required.');
-        exit;
-    }
-
-    $invalid = invalidRecipients($recipients);
-
-    if (count($invalid) > 0) {
-        redirectWithAlert('Invalid recipient email: ' . implode(', ', $invalid));
         exit;
     }
 
