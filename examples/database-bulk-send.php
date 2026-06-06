@@ -7,7 +7,9 @@ require_once __DIR__ . '/../src/Mailer.php';
 $config = MailerConfig::fromEnv(__DIR__ . '/../.env');
 $mailer = new Mailer($config);
 
-$conn = mysqli_connect('localhost', 'root', '', 'your_database');
+mysqli_report(MYSQLI_REPORT_OFF);
+
+$conn = @mysqli_connect('localhost', 'root', '', 'your_database');
 
 if (!$conn) {
     print_r([
