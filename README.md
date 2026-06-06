@@ -1,150 +1,281 @@
-# Mailer
+# Mailer Module
 
-Mailer is a lightweight PHP application for storing recipient emails in MySQL and sending one message to all saved recipients through PHPMailer SMTP.
+This is the `module-version` branch. It is the maintained copy-paste PHP mailer module for adding SMTP email sending to an existing PHP website.
+
+The module supports:
+
+- Target send to one recipient
+- Target send to multiple recipients
+- Database-backed bulk send from any query that returns an `email` column
+- HTML or plain-text message mode
+- Default or per-send sender display name
+
+The root app pages from the starter branches are intentionally not included on this branch.
 
 ## Requirements
 
-- PHP with the `mysqli` extension enabled
-- MySQL or MariaDB
-- A local web server that can run PHP
-- SMTP credentials, such as a Gmail account with a generated app password
+- PHP with the `mysqli` extension if you use database-backed bulk send
+- A PHP-capable web server or PHP CLI runtime
+- SMTP credentials
+- The included local PHPMailer runtime files
+
+No Composer package, framework, JavaScript build step, Laravel, Symfony, or WordPress integration is required.
+
+## Files To Copy
+
+Copy this module folder into your existing PHP project, or clone/download this branch and copy the needed files.
+
+Required files:
+
+```text
+mailer/
+  src/
+    EnvLoader.php
+    MailerConfig.php
+    Mailer.php
+  phpmailer/
+    LICENSE
+    src/
+      Exception.php
+      PHPMailer.php
+      SMTP.php
+  .env.example
+```
+
+Optional files:
+
+```text
+mailer/
+  examples/
+  db/mailer.sql
+```
+
+Example project layout:
+
+```text
+your-site/
+  public/
+    send-contact.php
+  mailer/
+    src/
+    phpmailer/
+    .env
+```
 
 ## Setup
 
-1. Import the database dump:
-
-   ```bash
-   mysql -u root -p mailer < db/mailer.sql
-   ```
-
-   If the `mailer` database does not exist yet, create it first:
-
-   ```sql
-   CREATE DATABASE mailer;
-   ```
-
-2. Copy the environment template:
+1. Copy `.env.example` to `.env`.
 
    ```bash
    cp .env.example .env
    ```
 
-3. Update `.env` for your system:
+2. Fill in your SMTP settings.
 
    ```env
-   DB_HOST=localhost
-   DB_USERNAME=root
-   DB_PASSWORD=
-   DB_NAME=mailer
-
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=465
    SMTP_SECURE=ssl
-   SMTP_USERNAME=your-email@example.com
-   SMTP_PASSWORD=your-new-app-password
-   SMTP_FROM=your-email@example.com
+   SMTP_USERNAME=sender@example.com
+   SMTP_PASSWORD=your-app-password
+   SMTP_FROM=sender@example.com
+   SMTP_FROM_NAME=Your Website
    ```
 
-   Required keys:
+Required keys:
 
-   - `DB_HOST`
-   - `DB_USERNAME`
-   - `DB_PASSWORD`
-   - `DB_NAME`
-   - `SMTP_HOST`
-   - `SMTP_PORT`
-   - `SMTP_SECURE`
-   - `SMTP_USERNAME`
-   - `SMTP_PASSWORD`
-   - `SMTP_FROM`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USERNAME`
+- `SMTP_PASSWORD`
+- `SMTP_FROM`
 
-4. For Gmail SMTP, create a new app password in your Google account and use that value for `SMTP_PASSWORD`. Do not use your normal account password.
+Optional key:
 
-5. Serve the project through your local PHP server or local web stack, then open:
+- `SMTP_FROM_NAME`
 
-   ```text
-   home.html
-   ```
+For Gmail SMTP, use a generated app password. Do not use your normal account password.
 
-## Usage
+## Load The Module
 
-- Open `insert.php` to add recipient names and email addresses.
-- Open `index.php` to view saved recipients and send an email to all valid recipients.
-- The send flow requires complete SMTP values in `.env`.
-
-## Add This To An Existing PHP Website
-
-Use this project as a small PHP/MySQL mailer module. The easiest integration is to place it in a folder inside an existing PHP site, for example:
-
-```text
-your-site/
-  mailer/
-    connect.php
-    send.php
-    insert.php
-    index.php
-    db/mailer.sql
-    phpmailer/
-    .env.example
-```
-
-If the existing website will use this module's recipient management pages, copy:
-
-```text
-connect.php
-send.php
-insert.php
-index.php
-db/mailer.sql
-phpmailer/
-.env.example
-```
-
-If the existing website already manages recipients in its own database table, copy only the sending pieces:
-
-```text
-connect.php
-send.php
-phpmailer/
-.env.example
-```
-
-Then either import `db/mailer.sql` into the existing database, or update `send.php` so the recipient query matches the existing site table.
-
-Current recipient query:
+In your own PHP handler, require the module files:
 
 ```php
+require_once __DIR__ . '/../mailer/src/EnvLoader.php';
+require_once __DIR__ . '/../mailer/src/MailerConfig.php';
+require_once __DIR__ . '/../mailer/src/Mailer.php';
+
+$config = MailerConfig::fromEnv(__DIR__ . '/../mailer/.env');
+$mailer = new Mailer($config);
+```
+
+If your PHPMailer folder is not beside `src/`, pass a custom PHPMailer source path:
+
+```php
+$mailer = new Mailer($config, __DIR__ . '/../vendor/phpmailer/src');
+```
+
+You can also build config directly from an array:
+
+```php
+$config = MailerConfig::fromArray([
+    'SMTP_HOST' => 'smtp.gmail.com',
+    'SMTP_PORT' => '465',
+    'SMTP_SECURE' => 'ssl',
+    'SMTP_USERNAME' => 'sender@example.com',
+    'SMTP_PASSWORD' => 'your-app-password',
+    'SMTP_FROM' => 'sender@example.com',
+    'SMTP_FROM_NAME' => 'Your Website',
+]);
+```
+
+## Public API
+
+```php
+$mailer->sendTo(
+    string $email,
+    string $subject,
+    string $message,
+    array $options = []
+): array;
+```
+
+```php
+$mailer->sendToMany(
+    array $emails,
+    string $subject,
+    string $message,
+    array $options = []
+): array;
+```
+
+```php
+$mailer->sendBulkFromDatabase(
+    mysqli $conn,
+    string $query,
+    string $subject,
+    string $message,
+    array $options = []
+): array;
+```
+
+Supported options:
+
+```php
+[
+    'is_html' => true,
+    'from_name' => 'Custom Sender Name',
+]
+```
+
+- `is_html` must be a boolean. It defaults to `true`.
+- `from_name` must be a string. It overrides `SMTP_FROM_NAME` for one send call.
+- Sender display names containing line breaks are rejected.
+
+## Result Shape
+
+Every public send method returns:
+
+```php
+[
+    'success' => true,
+    'sent' => 1,
+    'failed' => 0,
+    'errors' => [],
+]
+```
+
+`success` is `true` only when all intended recipients were sent successfully.
+
+## Send To One Recipient
+
+Put this in your own form handler, controller, or PHP action file:
+
+```php
+$result = $mailer->sendTo(
+    'recipient@example.com',
+    'Subject here',
+    '<p>Message here</p>'
+);
+
+if (!$result['success']) {
+    // Show a safe error message or log the result for your own system.
+}
+```
+
+## Send To Multiple Recipients
+
+```php
+$result = $mailer->sendToMany(
+    [
+        'first-recipient@example.com',
+        'second-recipient@example.com',
+    ],
+    'Subject here',
+    '<p>Message here</p>',
+    [
+        'from_name' => 'Announcements',
+    ]
+);
+```
+
+The module sends one message per recipient so recipients are not exposed to each other.
+
+## Send Plain Text
+
+```php
+$result = $mailer->sendTo(
+    'recipient@example.com',
+    'Plain text subject',
+    "Plain text message body.",
+    [
+        'is_html' => false,
+    ]
+);
+```
+
+## Database-Backed Bulk Send
+
+Use this when your existing system already has recipient emails in a database table.
+
+```php
+$conn = mysqli_connect('localhost', 'root', '', 'your_database');
+
+$result = $mailer->sendBulkFromDatabase(
+    $conn,
+    'SELECT email FROM emails',
+    'Bulk subject',
+    '<p>Bulk message body.</p>'
+);
+```
+
+The query must return a column named `email`.
+
+Example valid queries:
+
+```sql
 SELECT email FROM emails
+SELECT email FROM subscribers WHERE active = 1
 ```
 
-Example for an existing subscribers table:
+Do not pass raw user input into the query. Build a trusted query or use your own prepared statements before calling the module.
 
-```php
-SELECT email FROM subscribers
+## Examples
+
+Optional example files are included:
+
+```text
+examples/target-send.php
+examples/multi-target-send.php
+examples/database-bulk-send.php
 ```
 
-To link to the module pages from an existing site:
-
-```html
-<a href="/mailer/insert.php">Add Recipient</a>
-<a href="/mailer/index.php">Send Email</a>
-```
-
-To use an existing page as the send form, post to `send.php` with `subject`, `message`, and a submit control named `send`:
-
-```html
-<form action="/mailer/send.php" method="post">
-  <input type="text" name="subject" required>
-  <textarea name="message" required></textarea>
-  <button type="submit" name="send">Send</button>
-</form>
-```
-
-Make sure the `.env` file is in the same folder as `connect.php`, or update `connect.php` to load the environment file from the correct path.
+They are reference scripts. You can copy the pattern into your own handler instead of using the example files directly.
 
 ## PHPMailer Files
 
-This project vendors only the PHPMailer files required for the current SMTP flow:
+This branch vendors only the PHPMailer files required for SMTP sending:
 
 ```text
 phpmailer/LICENSE
@@ -153,12 +284,13 @@ phpmailer/src/PHPMailer.php
 phpmailer/src/SMTP.php
 ```
 
-OAuth, POP-before-SMTP, DSN configuration, language packs, Composer metadata, duplicate source folders, and zip artifacts are intentionally excluded.
+OAuth, POP-before-SMTP, language packs, Composer metadata, duplicate source folders, and zip artifacts are intentionally excluded.
 
-## Security Notes
+## Production Notes
 
 - Never commit `.env`.
 - Never commit real SMTP credentials.
-- Never commit real recipient seed data in `db/mailer.sql`.
+- Protect the PHP handler that calls this module with your existing authentication, authorization, CSRF protection, and rate limiting.
+- Validate and authorize users before allowing them to send email.
+- For large recipient lists, consider queueing and provider rate limits in your host system.
 - If a Gmail app password was ever committed or shared, revoke it and create a new one.
-- This app does not include authentication, CSRF protection, rate limiting, or deployment hardening.
